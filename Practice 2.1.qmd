@@ -1,0 +1,59 @@
+---
+title: "Practice 2.1"
+format: html
+editor: visual
+---
+
+```{python}
+
+import numpy as np
+import pandas as pd
+
+data_dir = "https://dlsun.github.io/pods/data/"
+df_titanic = pd.read_csv(data_dir + "titanic.csv")
+```
+
+1. Filter the data to include passengers only. Calculate the joint distribution (cross-tab) between a passenger's class and where they embarked.
+
+```{python}
+pd.crosstab(df_titanic["class"], df_titanic["embarked"], normalize=True)
+```
+
+2. Using the joint distribution that calculated above, calculate the following:
+the conditional distribution of their class given where they embarked
+the conditional distribution of where they embarked given their class
+Use the conditional distributions that you calculate to answer the following quesitons:
+What proportion of 3rd class passengers embarked at Southampton?
+
+0.697
+
+What proportion of Southampton passengers were in 3rd class?
+
+0.306
+
+```{python}
+pd.crosstab(df_titanic["class"], df_titanic["embarked"], normalize='columns')
+```
+
+```{python}
+pd.crosstab(df_titanic["class"], df_titanic["embarked"], normalize='index')
+```
+
+
+3. Make a visualization showing the distribution of a passenger's class, given where they embarked.
+Discuss the pros and cons of using this visualization versus the distributions you calculated before, to answer the previous questions.
+
+```{python}
+from plotnine import (ggplot, geom_bar, aes)
+
+(ggplot(df_titanic,
+aes(
+  x = "embarked",
+  fill = "class"
+))
++ geom_bar(position = "fill")
+)
+```
+
+The visualization above is much more engaging, while comparing the size of the distributions within each embarkation location is better than a standard table. However, it is nearly impossible to find the exact count for each with this graph.
+
