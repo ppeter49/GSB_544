@@ -1,0 +1,223 @@
+---
+title: "Practice Activity 6.2: Multiple Regression and Model Validation"
+format: html
+editor: visual
+author: Parker Petersen
+---
+```{python}
+
+
+```
+Palmer Penguins Modeling
+
+Import the Palmer Penguins dataset and print out the first few rows.
+Suppose we want to predict bill_depth_mm using the other variables in the dataset.
+Dummify all variables that require this.
+
+```{python}
+ #flexibility = predictor variables
+```
+```{python}
+ !pip install palmerpenguins
+from palmerpenguins import load_penguins
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.metrics import mean_squared_error
+from plotnine import ggplot, aes, geom_line, labs, theme, scale_x_continuous, scale_y_continuous
+```
+```{python}
+ from sklearn.metrics import r2_score
+```
+Let's use the other variables to predict bill_depth_mm. Prepare your data and fit the following models on the entire dataset:
+Four different models, each containing a different set of predictor variables
+Create a plot like the right plot of Fig 1. in our Model Validation chapter with the training and test error plotted for each of your four models.
+Which of your models was best?
+
+```{python}
+penguins = load_penguins()
+penguins = penguins.dropna()
+X = penguins.drop('bill_depth_mm', axis=1)
+y = penguins['bill_depth_mm']
+
+X_train, X_test, y_train, y_test = train_test_split(X,y)
+
+X_train
+```
+ #Model 1
+```{python}
+ lr = LinearRegression()
+enc = OneHotEncoder()
+
+ct = ColumnTransformer(
+    [("dummify_sp", enc, ['species']),
+    ("dummify_i", enc, ['island']),
+    ("dummify_sex", enc, ['sex'])]
+)
+
+my_pipeline = Pipeline(
+    [('dummify_everything',ct), ('ols', lr)]
+)
+```
+```{python}
+ fitted_pipeline = my_pipeline.fit(X_train, y_train)
+
+ y_preds = fitted_pipeline.predict(X_test)
+
+ X_test['predict'] = y_preds
+X_test1 = X_test
+
+ MSE1 = mean_squared_error(y_test, y_preds)
+MSE1
+```
+```{python}
+ct = ColumnTransformer(
+    [("dummify_sp", enc, ['species']),
+    ("dummify_i", enc, ['island']),
+    ("dummify_sex", enc, ['sex'])]
+)
+
+my_pipeline2 = Pipeline(
+    [('dummify_everything',ct), ('ols', lr)]
+)
+
+fitted_pipeline = my_pipeline.fit(X_train, y_train)
+
+y_preds = fitted_pipeline.predict(X_test)
+
+X_test['predict'] = y_preds
+X_test1 = X_test
+
+MSE1 = mean_squared_error(y_test, y_preds)
+MSE1
+```
+
+
+```{python}
+predm2 = ['species', 'island', 'flipper_length_mm', 'body_mass_g']
+ct = ColumnTransformer(
+    [("dummify_sp", enc, ['species']),
+    ("dummify_i", enc, ['island'])]
+)
+
+my_pipeline2 = Pipeline(
+    [('dummify_everything', ct), ('ols', lr)]
+)
+
+fitted_pipeline2 = my_pipeline2.fit(X_train[predm2], y_train)
+
+y_preds2 = fitted_pipeline2.predict(X_test[predm2])
+
+X_test['predict_model2'] = y_preds2
+
+MSE2 = mean_squared_error(y_test, y_preds2)
+MSE2
+
+```
+
+```{python}
+
+predm3 = ['species', 'island', 'body_mass_g']
+
+ct = ColumnTransformer(
+    [("dummify_sp", enc, ['species']),
+    ("dummify_i", enc, ['island'])]
+)
+
+my_pipeline3 = Pipeline(
+    [('dummify_everything', ct), ('ols', lr)]
+)
+
+fitted_pipeline3 = my_pipeline3.fit(X_train[predm3], y_train)
+
+y_preds3 = fitted_pipeline3.predict(X_test[predm3])
+
+X_test['predict_model3'] = y_preds3
+MSE3 = mean_squared_error(y_test, y_preds3)
+MSE3
+```
+
+```{python}
+predm4 = ['species', 'island', 'flipper_length_mm', 'bill_length_mm', 'year'] 
+ct = ColumnTransformer(
+    [("dummify_sp", enc, ['species']),
+    ("dummify_i", enc, ['island'])]
+)
+
+my_pipeline4 = Pipeline(
+    [('dummify_everything', ct), ('ols', lr)]
+)
+
+fitted_pipeline4 = my_pipeline4.fit(X_train[predm4], y_train)
+
+y_preds4 = fitted_pipeline4.predict(X_test[predm4])
+
+X_test['predict_model4'] = y_preds4
+
+MSE4 = mean_squared_error(y_test, y_preds4)
+MSE4
+```
+
+```{python}
+MSE1
+MSE2
+MSE3
+MSE4
+```
+
+```{python}
+#msev = [MSE1, MSE2, MSE3, MSE4]
+#numpr = [len(predictors_model1), len(predictors_model2), len(predictors_model3), len(predictors_model4)]
+
+#data = pd.DataFrame({'Model': ['Model 1', 'Model 2', 'Model 3', 'Model 4'],
+                    # 'MSE': msev,
+                     #'Num_Predictors': numpr})
+#plot2 = ggplot(data, aes(x='Num_Predictors', y='MSE', color='Model')) + \
+      # geom_line() + \
+      # labs(title='MSE vs. Variables',
+          #  x='Variables',
+           # y='MSE')
+
+#print(plot2)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

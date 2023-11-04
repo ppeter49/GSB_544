@@ -1,0 +1,133 @@
+---
+title: "Practice Activity 6.1: Polynomial Regression"
+format: html
+editor: visual
+self-contained: TRUE
+author: Parker Petersen
+---
+
+Import the Palmer Penguins dataset and print out the first few rows.
+Suppose we want to predict bill_depth_mm using the other variables in the dataset.
+Which variables would we need to dummify?
+
+```{python}
+!pip install palmerpenguins
+!pip install scikit-learn
+from palmerpenguins import load_penguins
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from plotnine import ggplot, geom_point, aes, geom_line, labs
+import pandas as pd
+```
+
+```{python}
+penguins = load_penguins()
+penguins = penguins.dropna()
+X = penguins.drop('bill_length_mm', axis=1)
+y = penguins['bill_length_mm']
+
+X_train, X_test, y_train, y_test = train_test_split(X,y)
+
+X_train
+```
+```{python}
+#Preprocessing: OneHotEncoder
+#Model Spec: Linear Regression
+lr = LinearRegression()
+enc = OneHotEncoder()
+
+ct = ColumnTransformer(
+    [("dummify_sp", enc, ['species']),
+    ("dummify_i", enc, ['island']),
+    ("dummify_sex", enc, ['sex'])] 
+)
+
+# [('scaler', StandardScaler()), ('svc', SVC)]
+
+my_pipeline = Pipeline(
+    [('dummify_everything',ct), ('ols', lr)]
+)
+
+```
+```{python}
+fitted_pipeline = my_pipeline.fit(X_train, y_train)
+```
+```{python}
+fitted_pipeline
+```
+```{python}
+y_preds = fitted_pipeline.predict(X_test)
+```
+```{python}
+penguins.info()
+
+```
+
+Let's use bill_length_mm to predict bill_depth_mm. Prepare your data and fit the following models on the entire dataset:
+Simple linear regression (e.g. straight-line) model
+Quadratic (degree 2 polynomial) model
+Cubic (degree 3 polynomial) model
+Degree 10 polynomial model
+Make predictions for each model and plot your fitted models on the scatterplot.
+
+
+```{python}
+X = penguins['bill_length_mm']
+y = penguins['bill_depth_mm']
+
+lr = LinearRegression()
+enc = OneHotEncoder()
+
+my_pipeline = Pipeline(
+    [('ols', lr)]
+)
+```
+
+```{python}
+#model.fit(X_train, y_train)
+#y_pred = model.predict(X_test)
+```
+
+
+
+```{python}
+#ChatGPT debugging, formatting
+
+#LinearRegression().fit(PolynomialFeatures(degree=1).fit_transform(X), y)
+#predm1 = LinearRegression().predict(PolynomialFeatures(degree=1).fit_transform(X))
+
+#LinearRegression().fit(PolynomialFeatures(degree=2).fit_transform(X), y)
+#predm2 = LinearRegression().predict(PolynomialFeatures(degree=2).fit_transform(X))
+
+#LinearRegression().fit(PolynomialFeatures(degree=3).fit_transform(X), y)
+#predm3 = LinearRegression().predict(PolynomialFeatures(degree=3).fit_transform(X))
+
+#LinearRegression().fit(PolynomialFeatures(degree=10).fit_transform(X), y)
+#predm4 = LinearRegression().predict(PolynomialFeatures(degree=10).fit_transform(X))
+
+#plot_data = pd.DataFrame({'bill_length_mm': X['bill_length_mm'], 'bill_depth_mm': y})
+
+#plot = (ggplot(plot_data, aes(x='bill_length_mm', y='bill_depth_mm'))
+   #+ geom_point()
+   #+ labs(x='bill_length_mm', y='bill_depth_mm', title='Polynomial Regression Models')
+  # + geom_line(aes(y=predm1), color='red', size=1, linetype='dashed', alpha=0.8)
+   #+ geom_line(aes(y=predm2), color='blue', size=1, alpha=0.8)
+   #+ geom_line(aes(y=predm3), color='green', size=1, alpha=0.8)
+  # + geom_line(aes(y=predm4), color='purple', size=1, alpha=0.8)
+#)
+
+#print(plot)
+
+
+```
+
+Are any of the models above underfitting the data? If so, which ones and how can you tell?
+Are any of thhe models above overfitting the data? If so, which ones and how can you tell?
+Which of the above models do you think fits the data best and why?
+
+It seems as if 4th model (Degree 10 polynomial model) is overfitting the data, adjusting for too much of the quirks of the sample data. The linear model would definitely be the model that underfits the most. It seems that the quadratic model fits the data the best.
+
