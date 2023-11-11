@@ -1,0 +1,156 @@
+---
+title: "Practice Activity 7.1"
+format: html
+editor: visual
+author: Parker Petersen
+self-contained: TRUE
+---
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.compose import ColumnTransformer
+```
+```{python}
+ames = pd.read_csv("https://www.dropbox.com/scl/fi/g0n5le5p6fr136ggetfsf/AmesHousing.csv?rlkey=jlr9xtz1o6u5rghfo29a5c02f&dl=1")
+```
+```{python}
+ames.info()
+```
+```{python}
+lr = LinearRegression()
+
+X = ames.drop("SalePrice", axis=1)
+y = ames["SalePrice"]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y)
+```
+
+```{python}
+ct = ColumnTransformer(
+  [("standardize", StandardScaler(), ["Gr Liv Area", "TotRms AbvGrd"])],
+  remainder="drop"
+)
+
+my_pipeline = Pipeline(
+  [("preprocess", ct),
+  ("linear_regression", lr)]
+).set_output(transform="pandas")
+
+fitted_pipeline = my_pipeline.fit(X_train, y_train)
+y_pred = fitted_pipeline.predict(X_test)
+neg_mse = cross_val_score(fitted_pipeline, X, y, cv=10, scoring= 'neg_mean_squared_error')
+rmse = (abs(neg_mse.mean()))**(1/2)
+print(f"RMSE: {rmse}")
+```
+```{python}
+enc = OneHotEncoder(sparse_output=False)
+ct = ColumnTransformer(
+  [("dummify", enc, ["Bldg Type"]),
+  ("standardize", StandardScaler(), ["Gr Liv Area", "TotRms AbvGrd"])],
+  remainder = "drop"
+)
+my_pipeline = Pipeline(
+    [("preprocess", ct),
+    ("linear_regression", lr)]
+).set_output(transform="pandas")
+
+fitted_pipeline = my_pipeline.fit(X_train, y_train)
+y_pred = fitted_pipeline.predict(X_test)
+neg_mse = cross_val_score(fitted_pipeline, X, y, cv=10, scoring= 'neg_mean_squared_error')
+rmse = (abs(neg_mse.mean()))**(1/2)
+print(f"RMSE: {rmse}")
+```
+```{python}
+enc = OneHotEncoder(sparse_output=False)
+ct = ColumnTransformer(
+  [("dummify", enc, ["Bldg Type"]),
+  ("standardize", StandardScaler(), ["Gr Liv Area"])],
+  remainder = "drop"
+).set_output(transform="pandas")
+
+X_train_dummified = ct.fit_transform(X_train)
+X_train_dummified.info()
+
+ct_inter = ColumnTransformer(
+  [("interaction", PolynomialFeatures(interaction_only = True), ["standardize__Gr Liv Area", "dummify__Bldg Type_1Fam", "dummify__Bldg Type_2fmCon", "dummify__Bldg Type_Duplex", "dummify__Bldg Type_Twnhs", "dummify__Bldg Type_TwnhsE"])],
+  remainder = "drop"
+).set_output(transform = "pandas")
+
+my_pipeline = Pipeline(
+    [("preprocess", ct),
+    ("interaction", ct_inter),
+    ("linear_regression", lr)]).set_output(transform="pandas")
+
+fitted_pipeline = my_pipeline.fit(X_train, y_train)
+y_pred = fitted_pipeline.predict(X_test)
+neg_mse = cross_val_score(fitted_pipeline, X, y, cv=10, scoring= 'neg_mean_squared_error')
+rmse = (abs(neg_mse.mean()))**(1/2)
+print(f"RMSE: {rmse}")
+```
+```{python}
+ct = ColumnTransformer(
+  [("dummify", enc, ["Bldg Type"]),
+  ("standardize", StandardScaler(), ["Gr Liv Area", "TotRms AbvGrd"])],
+  remainder = "drop"
+).set_output(transform="pandas")
+
+X_train_standardized = ct.fit_transform(X_train)
+X_train_standardized.info()
+
+poly = ColumnTransformer(
+  [("PolyT", PolynomialFeatures(degree=(1,5)), ["standardize__Gr Liv Area", "standardize__TotRms AbvGrd"])],
+  remainder="drop").set_output(transform="pandas")
+
+my_pipeline = Pipeline(
+    [("preprocess", ct),
+    ("poly", poly),
+    ("linear_regression", lr)]
+).set_output(transform="pandas")
+
+fitted_pipeline = my_pipeline.fit(X_train, y_train)
+y_pred = fitted_pipeline.predict(X_test)
+neg_mse = cross_val_score(fitted_pipeline, X, y, cv=10, scoring= 'neg_mean_squared_error')
+rmse = (abs(neg_mse.mean()))**(1/2)
+print(f"RMSE: {rmse}")
+```
+
+The 3rd model that includes the size, building type, and their interactions is the best model with the lowest RMSE of 53708.71828496436
+
+Using the average cross validated root mean squared error for all of the models, the 3rd is the best.
+
+
+```{python}
+#ct = ColumnTransformer(
+    #[("dummify", enc, ["Bldg Type"]),
+    # ("standardize", StandardScaler(), ["Gr Liv Area", "TotRms AbvGrd"])],
+   # remainder="drop"
+#).set_output(transform="pandas")
+
+#degrees = {'preprocess__poly__degree': np.arange(1, 11)}
+
+#lr_pipeline_poly = Pipeline(
+  #  [("preprocess", ct),
+   #  ("poly", PolynomialFeatures()),
+    # ("linear_regression", lr)]
+#).set_output(transform="pandas")
+
+#gscv = GridSearchCV(lr_pipeline_poly, degrees, cv=5, scoring='r2')
+#gscv_fitted = gscv.fit(X_train, y_train)
+
+#results = pd.DataFrame({
+  #  'Degree': gscv_fitted.cv_results_['param_preprocess__poly__degree'],
+  #  'R-squared': gscv_fitted.cv_results_['mean_test_score']
+#})
+
+#print(results)
+
+
+```
+
+

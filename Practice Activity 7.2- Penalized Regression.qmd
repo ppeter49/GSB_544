@@ -1,0 +1,242 @@
+---
+title: "Practice Activity 7.2 Penalized Regression"
+format: html
+editor: visual
+author: Parker Petersen
+self-contained: TRUE
+---
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.pipeline import Pipeline
+from sklearn.compose import make_column_selector, ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, PolynomialFeatures
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import r2_score
+from plotnine import *
+```
+```{python}
+ames = pd.read_csv("https://www.dropbox.com/scl/fi/g0n5le5p6fr136ggetfsf/AmesHousing.csv?rlkey=jlr9xtz1o6u5rghfo29a5c02f&dl=1")
+```
+```{python}
+# Get rid of columns with mostly NaN values
+good_cols = ames.isna().sum() < 100
+ames = ames.loc[:,good_cols]
+
+# Drop other NAs
+ames = ames.dropna()
+
+```
+```{python}
+X = ames.drop(["SalePrice", "Order", "PID"], axis = 1)
+y = ames["SalePrice"]
+
+#handle_unknown='ignore' -> if there is a dummy variable in the test set and not training set it will ignore it
+#make_column_selector -> selecting all columns with dtype object (or categorical variable) and standardize all numerical variables
+#name, function, what you're running it on -> dummify, enc, make_column_selector
+
+ct = ColumnTransformer(
+  [
+    ("dummify",
+    OneHotEncoder(sparse_output = False, handle_unknown='ignore'),
+    make_column_selector(dtype_include=object)),
+    ("standardize",
+    StandardScaler(),
+    make_column_selector(dtype_include=np.number))
+  ],
+  remainder = "passthrough"
+)
+
+lr_pipeline_1 = Pipeline(
+  [("preprocessing", ct),
+  ("linear_regression", LinearRegression())]
+)
+
+```
+```{python}
+cross_val_score(lr_pipeline_1, X, y, cv = 5, scoring = 'r2')
+```
+
+```{python}
+
+#use log scale for alpha 10,1,0.1,0.001
+
+X = ames.drop(["SalePrice", "Order", "PID"], axis = 1)
+y = ames["SalePrice"]
+
+ct = ColumnTransformer(
+  [
+    ("dummify",
+    OneHotEncoder(sparse_output = False, handle_unknown='ignore'),
+    make_column_selector(dtype_include=object)),
+    ("standardize",
+    StandardScaler(),
+    make_column_selector(dtype_include=np.number))
+  ],
+  remainder = "passthrough"
+)
+
+ridge_pipeline = Pipeline(
+  [("preprocessing", ct),
+  ("ridge_lr", Ridge(alpha=1.0))]
+)
+
+scores = cross_val_score(ridge_pipeline, X, y, cv = 5, scoring = 'r2')
+scores
+
+np.mean(scores)
+```
+
+```{python}
+X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+lr_pipeline_1.fit(X_train, y_train).named_steps["linear_regression"].coef_
+ridge_pipeline.fit(X_train, y_train).named_steps["ridge_lr"].coef_
+
+coefs = pd.DataFrame({"LR": lr_pipeline_1.fit(X_train, y_train).named_steps["linear_regression"].coef_, "Ridge": ridge_pipeline.fit(X_train, y_train).named_steps["ridge_lr"].coef_})
+
+(ggplot(coefs, aes(x = "LR", y = "Ridge")) +
+    geom_point()
+)
+```
+
+
+```{python}
+#model1 = lr_pipeline_1.fit(X, y)
+
+#model1.named_steps['ridge_lr'].coef_
+
+```
+
+```{python}
+from sklearn.model_selection import GridSearchCV
+
+ct_poly = ColumnTransformer(
+  [
+    ("dummify", OneHotEncoder(sparse_output = False), ["Bldg Type"]),
+    ("polynomial", PolynomialFeatures(), ["Gr Liv Area"])
+  ],
+  remainder = "drop"
+)
+
+lr_pipeline_poly = Pipeline(
+  [("preprocessing", ct_poly),
+  ("ridge_lr", Ridge(alpha=1.0))]
+).set_output(transform="pandas")
+
+degrees = {'preprocessing__polynomial__degree': np.arange(1, 10)}
+
+gscv = GridSearchCV(lr_pipeline_poly, degrees, cv = 5, scoring='r2')
+
+scores = cross_val_score(lr_pipeline_poly, X, y, cv = 5, scoring = 'r2')
+scores
+
+np.mean(scores)
+```
+
+```{python}
+#LASSO
+X = ames.drop(["SalePrice", "Order", "PID"], axis = 1)
+y = ames["SalePrice"]
+
+ct = ColumnTransformer(
+  [
+    ("dummify",
+    OneHotEncoder(sparse_output = False, handle_unknown='ignore'),
+    make_column_selector(dtype_include=object)),
+    ("standardize",
+    StandardScaler(),
+    make_column_selector(dtype_include=np.number))
+  ],
+  remainder = "passthrough"
+)
+
+lr_pipeline_1 = Pipeline(
+  [("preprocessing", ct),
+  ("lasso_lr", Lasso(alpha=1.0))]
+)
+scores = cross_val_score(lr_pipeline_1, X, y, cv = 5, scoring = 'r2')
+scores
+np.mean(scores)
+
+lassomodel2 = lr_pipeline_1.fit(X, y)
+lassomodel2.named_steps['lasso_lr'].coef_
+
+scores = cross_val_score(lr_pipeline_1, X, y, cv = 5, scoring = 'r2')
+scores
+np.mean(scores)
+```
+
+
+
+```{python}
+
+#Elastic Net
+from sklearn.model_selection import GridSearchCV
+
+X = ames.drop(["SalePrice", "Order", "PID"], axis = 1)
+y = ames["SalePrice"]
+
+ct = ColumnTransformer(
+  [
+    ("dummify",
+    OneHotEncoder(sparse_output = False, handle_unknown='ignore'),
+    make_column_selector(dtype_include=object)),
+    ("standardize",
+    StandardScaler(),
+    make_column_selector(dtype_include=np.number))
+  ],
+  remainder = "passthrough"
+)
+
+lr_pipeline_e = Pipeline(
+  [("preprocessing", ct),
+  ("elastic_lr", ElasticNet(alpha=1.0, l1_ratio=0.2))]
+)
+
+param_grid = {
+    'elastic_lr__alpha': [0.1, 1.0, 10.0, 100.0],    # A range of alpha values
+    'elastic_lr__l1_ratio': [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]    # A range of l1_ratio values
+}
+
+gscv = GridSearchCV(lr_pipeline_e, param_grid, cv=5, scoring='r2')
+
+gscv_fitted = gscv.fit(X, y)
+
+results_df = pd.DataFrame({
+    'Alpha': gscv_fitted.cv_results_['param_elastic_lr__alpha'],
+    'L1 Ratio': gscv_fitted.cv_results_['param_elastic_lr__l1_ratio'],
+    'Mean Test Score': gscv_fitted.cv_results_['mean_test_score']
+})
+
+print(results_df)
+sorted_results_df = results_df.sort_values(by='Mean Test Score', ascending=True)
+print(sorted_results_df)
+```
+
+```{python}
+scores = cross_val_score(lr_pipeline_e, X, y, cv = 5, scoring = 'r2')
+scores
+np.mean(scores)
+
+elasticmodel2 = lr_pipeline_e.fit(X, y)
+elasticmodel2.named_steps['elastic_lr'].coef_
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
